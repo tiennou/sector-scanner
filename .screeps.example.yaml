@@ -1,0 +1,12 @@
+servers:
+  loan:
+    host: screeps.com
+    secure: true
+    token: # Your token here
+    portalSegment: 97
+    noviceSegment: 96
+    areaSegment: 95
+configs:
+  sector-scanner:
+    server: loan
+    output-dir: data

@@ -1,6 +1,8 @@
 'use strict';
-const { ScreepsAPI } = require('screeps-api')
+const { ScreepsAPI } = require('screeps-api');
+const { getConfig } = require('./shared');
 const fs = require('fs').promises
+const path = require('path')
 /*
 // Node 8 shim for local testing
 const {promisify} = require('util');
@@ -39,17 +41,30 @@ const outputFormat2 = {
 */
 
 async function run() {
-  const [,,server,segment,segmentArea] = process.argv;
+  let [,,server,segment,segmentArea] = process.argv;
+
+  const config = await getConfig();
+  const outDir = config.configs['sector-scanner']['output-dir'] ?? '.'
+  if (!server) {
+    server = config.configs['sector-scanner']['server'] ?? 'main'
+  }
+  if (!segment) {
+    segment = Number(config.servers[server].noviceSegment)
+  }
+  if (!segmentArea) {
+    segmentArea = Number(config.servers[server].areaSegment)
+  }
+
   const api = await ScreepsAPI.fromConfig(server);
-  const files = await fs.readdir('.');
+  const files = await fs.readdir(outDir);
   const shardFiles = files.filter(f => f.endsWith('.roominfo.json'))
   for(const file of shardFiles) {
     console.log(`Processing ${file}`)
     const [shard] = file.split('.')
-    const data = JSON.parse(await fs.readFile(file, 'utf8'))
+    const data = JSON.parse(await fs.readFile(path.join(outDir, file), 'utf8'))
     const raw=parseZones(data);
-    await fs.writeFile(`${shard}.novice.json`, raw[0])
-    await fs.writeFile(`${shard}.novice.area.json`, raw[1])
+    await fs.writeFile(path.join(outDir, `${shard}.novice.json`), raw[0])
+    await fs.writeFile(path.join(outDir, `${shard}.novice.area.json`), raw[1])
     if(server && segment) {
       console.log(`Uploading to segment ${segment} on ${shard} of ${server}`)
       await api.memory.segment.set(+segment, raw[0], shard)

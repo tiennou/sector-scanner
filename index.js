@@ -1,12 +1,22 @@
 const axios = require('axios')
 const { ScreepsAPI } = require('screeps-api')
+const { getConfig } = require('./shared')
 const fs = require('fs').promises
+const path = require('path')
 const debug = false
 
 let api
 
 async function run () {
-  api = await ScreepsAPI.fromConfig('main', 'main')
+  let [,,server] = process.argv
+
+  const config = await getConfig();
+  const outDir = config.configs['sector-scanner']['output-dir']
+  if (!server) {
+    server = config.configs['sector-scanner']['server'] ?? 'main'
+  }
+
+  api = await ScreepsAPI.fromConfig(server)
   const log = (...a) => debug ? console.log(...a) : ''
   await api.me()
   await api.socket.connect()
@@ -50,10 +60,10 @@ async function run () {
   }
   /**/
   await Promise.all(Object.entries(shards).map(([shard, { roomInfo, roomMaps, portals, users }]) => Promise.all([
-    fs.writeFile(`${shard}.roominfo.json`, JSON.stringify(roomInfo)),
-    fs.writeFile(`${shard}.roommaps.json`, JSON.stringify(roomMaps)),
-    fs.writeFile(`${shard}.portals.json`, JSON.stringify(portals)),
-    fs.writeFile(`${shard}.users.json`, JSON.stringify(users)),
+    fs.writeFile(path.join(outDir, `${shard}.roominfo.json`), JSON.stringify(roomInfo)),
+    fs.writeFile(path.join(outDir, `${shard}.roommaps.json`), JSON.stringify(roomMaps)),
+    fs.writeFile(path.join(outDir, `${shard}.portals.json`), JSON.stringify(portals)),
+    fs.writeFile(path.join(outDir, `${shard}.users.json`), JSON.stringify(users)),
   ])))
   await api.socket.disconnect()
 }
